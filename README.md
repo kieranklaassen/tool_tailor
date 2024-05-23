@@ -58,6 +58,49 @@ TestClass.instance_method(:get_current_weather).to_json_schema # => {
 #   }
 ```
 
+And with [ruby-openai](https://github.com/alexrudall/ruby-openai):
+
+```rb
+response =
+  client.chat(
+    parameters: {
+      model: "gpt-4o",
+      messages: [
+        {
+          "role": "user",
+          "content": "What is the weather like in San Francisco?",
+        },
+      ],
+      tools: [
+        TestClass.instance_method(:get_current_weather).to_json_schema
+      ],
+      tool_choice: {
+        type: "function",
+        function: {
+          name: "get_current_weather"
+        }
+      }
+    },
+  )
+
+message = response.dig("choices", 0, "message")
+
+if message["role"] == "assistant" && message["tool_calls"]
+  function_name = message.dig("tool_calls", 0, "function", "name")
+  args =
+    JSON.parse(
+      message.dig("tool_calls", 0, "function", "arguments"),
+      { symbolize_names: true },
+    )
+
+  case function_name
+  when "get_current_weather"
+    TestClass.get_current_weather(**args)
+  end
+end
+# => "The weather is nice 🌞"
+```
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
