@@ -83,8 +83,8 @@ module ToolTailor
   end
 end
 
-class Module
-  def to_json_schema(method_name)
-    ToolTailor.convert(instance_method(method_name))
+class UnboundMethod
+  def to_json_schema
+    ToolTailor.convert(self)
   end
 end

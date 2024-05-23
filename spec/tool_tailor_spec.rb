@@ -43,6 +43,6 @@ RSpec.describe ToolTailor do
     }.to_json
 
     # Assert that the generated schema matches the expected schema
-    expect(TestClass.to_json_schema(:get_current_weather)).to eq(expected_schema)
+    expect(TestClass.instance_method(:get_current_weather).to_json_schema).to eq(expected_schema)
   end
 end

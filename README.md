@@ -32,7 +32,7 @@ class TestClass
   end
 end
 
-TestClass.to_json_schema(:get_current_weather) # => {
+TestClass.instance_method(:get_current_weather).to_json_schema # => {
 #   "type" => "function",
 #   "function" => {
 #     "name" => "get_current_weather",
