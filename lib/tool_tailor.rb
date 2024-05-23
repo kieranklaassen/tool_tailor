@@ -82,3 +82,9 @@ module ToolTailor
     end
   end
 end
+
+class Module
+  def to_json_schema(method_name)
+    ToolTailor.convert(instance_method(method_name))
+  end
+end

@@ -7,10 +7,6 @@ class TestClass
   def get_current_weather(location, unit = 'celsius', api_key: nil)
     # Function implementation goes here
   end
-
-  def self.to_json_schema
-    ToolTailor.convert(instance_method(:get_current_weather))
-  end
 end
 
 RSpec.describe ToolTailor do
@@ -47,6 +43,6 @@ RSpec.describe ToolTailor do
     }.to_json
 
     # Assert that the generated schema matches the expected schema
-    expect(TestClass.to_json_schema).to eq(expected_schema)
+    expect(TestClass.to_json_schema(:get_current_weather)).to eq(expected_schema)
   end
 end
