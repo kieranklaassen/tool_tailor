@@ -10,6 +10,13 @@ module ToolTailor
   # @param function [Method, UnboundMethod] The function to convert.
   # @return [String] The JSON schema representation of the function.
   # @raise [ArgumentError] If the provided object is not a Method or UnboundMethod.
+  #
+  # @example
+  #   def example_method(param1, param2)
+  #     # method implementation
+  #   end
+  #
+  #   ToolTailor.convert(method(:example_method))
   def self.convert(function)
     unless function.is_a?(Method) || function.is_a?(UnboundMethod)
       raise ArgumentError, "Unsupported object type: #{function.class}"
