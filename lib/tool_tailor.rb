@@ -114,3 +114,44 @@ class UnboundMethod
     ToolTailor.convert(self)
   end
 end
+
+class Method
+  # Converts a Method to a JSON schema.
+  #
+  # @example
+  #   class ExampleClass
+  #     # @param name [String] The name of the person.
+  #     # @param age [Integer] The age of the person.
+  #     def greet(name, age)
+  #       puts "Hello, #{name}! You are #{age} years old."
+  #     end
+  #   end
+  #
+  #   ExampleClass.new.method(:greet).to_json_schema
+  #   # => {
+  #   #   "type" => "function",
+  #   #   "function" => {
+  #   #     "name" => "greet",
+  #   #     "description" => "",
+  #   #     "parameters" => {
+  #   #       "type" => "object",
+  #   #       "properties" => {
+  #   #         "name" => {
+  #   #           "type" => "string",
+  #   #           "description" => "The name of the person."
+  #   #         },
+  #   #         "age" => {
+  #   #           "type" => "integer",
+  #   #           "description" => "The age of the person."
+  #   #         }
+  #   #       },
+  #   #       "required" => ["name", "age"]
+  #   #     }
+  #   #   }
+  #   # }
+  #
+  # @return [String] The JSON schema representation of the method.
+  def to_json_schema
+    ToolTailor.convert(self)
+  end
+end

@@ -31,6 +31,7 @@ class TestClass
   end
 end
 
+# Unbound method
 TestClass.instance_method(:get_current_weather).to_json_schema # => {
 #   "type" => "function",
 #   "function" => {
@@ -55,6 +56,34 @@ TestClass.instance_method(:get_current_weather).to_json_schema # => {
 #       "required" => ["location", "unit", "api_key"]
 #     }
 #   }
+
+# Bound method
+example_instance = TestClass.new
+example_instance.method(:get_current_weather).to_json_schema # => {
+#   "type" => "function",
+#   "function" => {
+#     "name" => "get_current_weather",
+#     "description" => "Get the current weather in a given location.",
+#     "parameters" => {
+#       "type" => "object",
+#       "properties" => {
+#         "location" => {
+#           "type" => "string",
+#           "description" => "The city and state, e.g., San Francisco, CA."
+#         },
+#         "unit" => {
+#           "type" => "string",
+#           "description" => "The unit of temperature, either 'celsius' or 'fahrenheit'."
+#         },
+#         "api_key" => {
+#           "type" => "number",
+#           "description" => "The API key for the weather service."
+#         }
+#       },
+#       "required" => ["location", "unit", "api_key"]
+#     }
+#   }
+# }
 ```
 
 And with [ruby-openai](https://github.com/alexrudall/ruby-openai):
