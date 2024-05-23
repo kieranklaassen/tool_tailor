@@ -31,7 +31,10 @@ class TestClass
   end
 end
 
-# Unbound method
+# Simple
+ToolTailor.convert(TestClass.instance_method(:get_current_weather))
+
+# Unbound method with to_json_schema
 TestClass.instance_method(:get_current_weather).to_json_schema # => {
 #   "type" => "function",
 #   "function" => {
@@ -57,7 +60,7 @@ TestClass.instance_method(:get_current_weather).to_json_schema # => {
 #     }
 #   }
 
-# Bound method
+# Bound method with to_json_schema
 example_instance = TestClass.new
 example_instance.method(:get_current_weather).to_json_schema # => {
 #   "type" => "function",
