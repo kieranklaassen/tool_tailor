@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    tool_tailor (0.1.1)
+    tool_tailor (0.1.2)
       yard (~> 0.9.36)
 
 GEM
