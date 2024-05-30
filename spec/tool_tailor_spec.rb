@@ -11,7 +11,6 @@ class TestClass
   def missing_yard(text:)
   end
 
-  # @param text [String] The text to be processed.
   def not_named_arg(text)
   end
 end
