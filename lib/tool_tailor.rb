@@ -39,6 +39,15 @@ module ToolTailor
       }
     end
 
+    # Extract default values and named arguments from the function definition
+    defaults = function.parameters.select { |type, _| type == :keyreq || type == :key }.map do |_, name|
+      name
+    end
+
+    parameters.each do |param|
+      param[:has_default] = defaults.include?(param[:name].to_sym)
+    end
+
     {
       type: "function",
       function: {
@@ -55,7 +64,7 @@ module ToolTailor
               }
             ]
           end.to_h,
-          required: parameters.map { |param| param[:name].to_s }
+          required: function.parameters.select { |type, _| type == :keyreq }.map { |_, name| name.to_s }
         }
       }
     }.to_json

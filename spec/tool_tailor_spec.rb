@@ -4,8 +4,19 @@ class TestClass
   # @param location [String] The city and state, e.g., San Francisco, CA.
   # @param unit [String] The unit of temperature, either 'celsius' or 'fahrenheit'.
   # @param api_key [Float] The API key for the weather service.
-  def get_current_weather(location, unit = 'celsius', api_key: nil)
+  def get_current_weather(location:, unit: 'celsius', api_key: nil)
     # Function implementation goes here
+  end
+
+  def missing_yard(text:)
+  end
+
+  # @param api_key [Float] The API key for the weather service.
+  def wrong_yard_signature(text:)
+  end
+
+  # @param text [String] The text to be processed.
+  def not_named_arg(text)
   end
 end
 
@@ -37,7 +48,7 @@ RSpec.describe ToolTailor do
               "description" => "The API key for the weather service."
             }
           },
-          "required" => ["location", "unit", "api_key"]
+          "required" => ["location"]
         }
       }
     }.to_json
@@ -45,5 +56,40 @@ RSpec.describe ToolTailor do
     # Assert that the generated schema matches the expected schema
     expect(TestClass.instance_method(:get_current_weather).to_json_schema).to eq(expected_schema)
     expect(TestClass.new.method(:get_current_weather).to_json_schema).to eq(expected_schema)
+  end
+
+  it "handles missing YARD documentation gracefully" do
+    expected_schema = {
+      "type" => "function",
+      "function" => {
+        "name" => "missing_yard",
+        "description" => "",
+        "parameters" => {
+          "type" => "object",
+          "properties" => {
+            "text" => {
+              "type" => "string",
+              "description" => ""
+            }
+          },
+          "required" => ["text"]
+        }
+      }
+    }.to_json
+
+    expect(TestClass.instance_method(:missing_yard).to_json_schema).to eq(expected_schema)
+    expect(TestClass.new.method(:missing_yard).to_json_schema).to eq(expected_schema)
+  end
+
+  it "raises an error for wrong YARD parameter signature" do
+    expect {
+      TestClass.instance_method(:wrong_yard_signature).to_json_schema
+    }.to raise_error(RuntimeError, /Documentation for TestClass#wrong_yard_signature not found./)
+  end
+
+  it "raises an error for non-named arguments" do
+    expect {
+      TestClass.instance_method(:not_named_arg).to_json_schema
+    }.to raise_error(ArgumentError, /Only named arguments are supported/)
   end
 end
