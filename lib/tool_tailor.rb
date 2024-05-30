@@ -48,7 +48,8 @@ module ToolTailor
       function_description = yard_object.docstring
 
       yard_object.tags("param").each do |tag|
-        param = parameters.find { |p| p[:name] == tag.name }
+        param_name = tag.name.chomp(':')
+        param = parameters.find { |p| p[:name] == param_name }
         if param
           param[:type] = type_mapping(tag.types.first)
           param[:description] = tag.text

@@ -3,7 +3,7 @@ class TestClass
   #
   # @param location [String] The city and state, e.g., San Francisco, CA.
   # @param unit [String] The unit of temperature, either 'celsius' or 'fahrenheit'.
-  # @param api_key [Float] The API key for the weather service.
+  # @param api_key: [Float] The API key for the weather service.
   def get_current_weather(location:, unit: 'celsius', api_key: nil)
     # Function implementation goes here
   end
