@@ -26,7 +26,7 @@ class TestClass
   #
   # @param location [String] The city and state, e.g., San Francisco, CA.
   # @param unit [String] The unit of temperature, either 'celsius' or 'fahrenheit'.
-  def get_current_weather(location, unit = 'celsius')
+  def get_current_weather(location:, unit: 'celsius')
     # Function implementation goes here
   end
 end
