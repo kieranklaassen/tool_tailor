@@ -22,30 +22,38 @@ module ToolTailor
       raise ArgumentError, "Unsupported object type: #{function.class}"
     end
 
+    # Ensure only named arguments are allowed
+    unless function.parameters.all? { |type, _| type == :keyreq || type == :key }
+      raise ArgumentError, "Only named arguments are supported"
+    end
+
     file_path, line_number = function.source_location
     YARD.parse(file_path)
 
     method_path = "#{function.owner}##{function.name}"
     yard_object = YARD::Registry.at(method_path)
-    raise "Documentation for #{method_path} not found." if yard_object.nil?
 
-    function_description = yard_object.docstring
-
-    parameters = yard_object.tags("param").map do |tag|
+    # Extract parameters from the function definition
+    parameters = function.parameters.map do |_, name|
       {
-        name: tag.name,
-        type: type_mapping(tag.types.first),
-        description: tag.text
+        name: name.to_s,
+        type: "string",
+        description: ""
       }
     end
 
-    # Extract default values and named arguments from the function definition
-    defaults = function.parameters.select { |type, _| type == :keyreq || type == :key }.map do |_, name|
-      name
-    end
+    function_description = ""
 
-    parameters.each do |param|
-      param[:has_default] = defaults.include?(param[:name].to_sym)
+    if yard_object
+      function_description = yard_object.docstring
+
+      yard_object.tags("param").each do |tag|
+        param = parameters.find { |p| p[:name] == tag.name }
+        if param
+          param[:type] = type_mapping(tag.types.first)
+          param[:description] = tag.text
+        end
+      end
     end
 
     {

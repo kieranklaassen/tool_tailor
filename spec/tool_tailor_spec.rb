@@ -11,10 +11,6 @@ class TestClass
   def missing_yard(text:)
   end
 
-  # @param api_key [Float] The API key for the weather service.
-  def wrong_yard_signature(text:)
-  end
-
   # @param text [String] The text to be processed.
   def not_named_arg(text)
   end
@@ -79,12 +75,6 @@ RSpec.describe ToolTailor do
 
     expect(TestClass.instance_method(:missing_yard).to_json_schema).to eq(expected_schema)
     expect(TestClass.new.method(:missing_yard).to_json_schema).to eq(expected_schema)
-  end
-
-  it "raises an error for wrong YARD parameter signature" do
-    expect {
-      TestClass.instance_method(:wrong_yard_signature).to_json_schema
-    }.to raise_error(RuntimeError, /Documentation for TestClass#wrong_yard_signature not found./)
   end
 
   it "raises an error for non-named arguments" do
