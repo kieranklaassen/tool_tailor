@@ -22,11 +22,12 @@ Or install it yourself as:
 
 ```rb
 class TestClass
-  # Get the current weather in a given location.
+  # Get the current temperature for a specific location.
   #
   # @param location [String] The city and state, e.g., San Francisco, CA.
-  # @param unit [String] The unit of temperature, either 'celsius' or 'fahrenheit'.
-  def get_current_weather(location:, unit: 'celsius')
+  # @param unit [String] The temperature unit to use. Infer this from the user's location.
+  # @values unit ["Celsius", "Fahrenheit"]
+  def get_current_temperature(location:, unit:)
     # Function implementation goes here
   end
 end
@@ -38,8 +39,8 @@ ToolTailor.convert(TestClass.instance_method(:get_current_weather))
 TestClass.instance_method(:get_current_weather).to_json_schema # => {
 #   "type" => "function",
 #   "function" => {
-#     "name" => "get_current_weather",
-#     "description" => "Get the current weather in a given location.",
+#     "name" => "get_current_temperature",
+#     "description" => "Get the current temperature for a specific location.",
 #     "parameters" => {
 #       "type" => "object",
 #       "properties" => {
@@ -49,14 +50,11 @@ TestClass.instance_method(:get_current_weather).to_json_schema # => {
 #         },
 #         "unit" => {
 #           "type" => "string",
-#           "description" => "The unit of temperature, either 'celsius' or 'fahrenheit'."
-#         },
-#         "api_key" => {
-#           "type" => "number",
-#           "description" => "The API key for the weather service."
+#           "description" => "The temperature unit to use. Infer this from the user's location.",
+#           "enum" => ["Celsius", "Fahrenheit"]
 #         }
 #       },
-#       "required" => ["location", "unit", "api_key"]
+#       "required" => ["location", "unit"]
 #     }
 #   }
 
@@ -65,8 +63,8 @@ example_instance = TestClass.new
 example_instance.method(:get_current_weather).to_json_schema # => {
 #   "type" => "function",
 #   "function" => {
-#     "name" => "get_current_weather",
-#     "description" => "Get the current weather in a given location.",
+#     "name" => "get_current_temperature",
+#     "description" => "Get the current temperature for a specific location.",
 #     "parameters" => {
 #       "type" => "object",
 #       "properties" => {
@@ -76,17 +74,13 @@ example_instance.method(:get_current_weather).to_json_schema # => {
 #         },
 #         "unit" => {
 #           "type" => "string",
-#           "description" => "The unit of temperature, either 'celsius' or 'fahrenheit'."
-#         },
-#         "api_key" => {
-#           "type" => "number",
-#           "description" => "The API key for the weather service."
+#           "description" => "The temperature unit to use. Infer this from the user's location.",
+#           "enum" => ["Celsius", "Fahrenheit"]
 #         }
 #       },
-#       "required" => ["location", "unit", "api_key"]
+#       "required" => ["location", "unit"]
 #     }
 #   }
-# }
 ```
 
 And with [ruby-openai](https://github.com/alexrudall/ruby-openai):
@@ -103,12 +97,12 @@ response =
         },
       ],
       tools: [
-        TestClass.instance_method(:get_current_weather).to_json_schema
+        TestClass.instance_method(:get_current_temperature).to_json_schema
       ],
       tool_choice: {
         type: "function",
         function: {
-          name: "get_current_weather"
+          name: "get_current_temperature"
         }
       }
     },
@@ -125,8 +119,8 @@ if message["role"] == "assistant" && message["tool_calls"]
     )
 
   case function_name
-  when "get_current_weather"
-    TestClass.get_current_weather(**args)
+  when "get_current_temperature"
+    TestClass.get_current_temperature(**args)
   end
 end
 # => "The weather is nice 🌞"
