@@ -1,4 +1,14 @@
+# Class with YARD documentation
 class TestClass
+  # @param name [String] The name of the test instance
+  # @param value [Integer] A test value
+  # @param options [Hash] Additional options
+  def initialize(name: "default", value: 1, options: {})
+    @name = name
+    @value = value
+    @options = options
+  end
+
   # Get the current weather in a given location.
   #
   # @param location [String] The city and state, e.g., San Francisco, CA.
@@ -80,5 +90,35 @@ RSpec.describe ToolTailor do
     expect {
       TestClass.instance_method(:not_named_arg).to_json_schema
     }.to raise_error(ArgumentError, /Only named arguments are supported/)
+  end
+
+  it "converts a class to a JSON schema representation using the initialize method" do
+    expected_schema = {
+      "type" => "function",
+      "function" => {
+        "name" => "TestClass",
+        "description" => "Class with YARD documentation",
+        "parameters" => {
+          "type" => "object",
+          "properties" => {
+            "name" => {
+              "type" => "string",
+              "description" => "The name of the test instance"
+            },
+            "value" => {
+              "type" => "integer",
+              "description" => "A test value"
+            },
+            "options" => {
+              "type" => "object",
+              "description" => "Additional options"
+            }
+          },
+          "required" => []
+        }
+      }
+    }.to_json
+
+    expect(ToolTailor.convert(TestClass)).to eq(expected_schema)
   end
 end

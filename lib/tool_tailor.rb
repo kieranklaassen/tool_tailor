@@ -5,36 +5,56 @@ require "yard"
 module ToolTailor
   class Error < StandardError; end
 
-  # Converts a function to a JSON schema representation.
+  # Converts a function or class to a JSON schema representation.
   #
-  # @param function [Method, UnboundMethod] The function to convert.
-  # @return [String] The JSON schema representation of the function.
-  # @raise [ArgumentError] If the provided object is not a Method or UnboundMethod.
+  # @param object [Method, UnboundMethod, Class] The function or class to convert.
+  # @return [String] The JSON schema representation of the function or class.
+  # @raise [ArgumentError] If the provided object is not a Method, UnboundMethod, or Class.
   #
   # @example
-  #   def example_method(param1, param2)
+  #   def example_method(param1:, param2:)
   #     # method implementation
   #   end
   #
   #   ToolTailor.convert(method(:example_method))
-  def self.convert(function)
-    unless function.is_a?(Method) || function.is_a?(UnboundMethod)
-      raise ArgumentError, "Unsupported object type: #{function.class}"
+  #
+  # @example
+  #   class ExampleClass
+  #     def initialize(param1:, param2:)
+  #       # initialization
+  #     end
+  #   end
+  #
+  #   ToolTailor.convert(ExampleClass)
+  def self.convert(object)
+    case object
+    when Method, UnboundMethod
+      convert_method(object)
+    when Class
+      convert_class(object)
+    else
+      raise ArgumentError, "Unsupported object type: #{object.class}"
     end
+  end
 
+  # Converts a method to a JSON schema representation.
+  #
+  # @param method [Method, UnboundMethod] The method to convert.
+  # @return [String] The JSON schema representation of the method.
+  def self.convert_method(method)
     # Ensure only named arguments are allowed
-    unless function.parameters.all? { |type, _| type == :keyreq || type == :key }
+    unless method.parameters.all? { |type, _| type == :keyreq || type == :key }
       raise ArgumentError, "Only named arguments are supported"
     end
 
-    file_path, line_number = function.source_location
+    file_path, line_number = method.source_location
     YARD.parse(file_path)
 
-    method_path = "#{function.owner}##{function.name}"
+    method_path = "#{method.owner}##{method.name}"
     yard_object = YARD::Registry.at(method_path)
 
-    # Extract parameters from the function definition
-    parameters = function.parameters.map do |_, name|
+    # Extract parameters from the method definition
+    parameters = method.parameters.map do |_, name|
       {
         name: name.to_s,
         type: "string",
@@ -42,10 +62,10 @@ module ToolTailor
       }
     end
 
-    function_description = ""
+    method_description = ""
 
     if yard_object
-      function_description = yard_object.docstring
+      method_description = yard_object.docstring
 
       yard_object.tags("param").each do |tag|
         param_name = tag.name.chomp(':')
@@ -60,8 +80,8 @@ module ToolTailor
     {
       type: "function",
       function: {
-        name: function.name.to_s,
-        description: function_description,
+        name: method.name.to_s,
+        description: method_description,
         parameters: {
           type: "object",
           properties: parameters.map do |param|
@@ -73,10 +93,27 @@ module ToolTailor
               }
             ]
           end.to_h,
-          required: function.parameters.select { |type, _| type == :keyreq }.map { |_, name| name.to_s }
+          required: method.parameters.select { |type, _| type == :keyreq }.map { |_, name| name.to_s }
         }
       }
     }.to_json
+  end
+
+  def self.convert_class(klass)
+    initialize_method = klass.instance_method(:initialize)
+    schema = JSON.parse(convert_method(initialize_method))
+    schema["function"]["name"] = klass.name
+
+    # Re-parse YARD documentation for the class
+    file_path, _ = initialize_method.source_location
+    YARD.parse(file_path)
+    class_object = YARD::Registry.at(klass.name)
+
+    if class_object
+      schema["function"]["description"] = class_object.docstring.to_s
+    end
+
+    schema.to_json
   end
 
   # Maps Ruby types to JSON schema types.
@@ -102,38 +139,6 @@ end
 class UnboundMethod
   # Converts an UnboundMethod to a JSON schema.
   #
-  # @example
-  #   class ExampleClass
-  #     # @param name [String] The name of the person.
-  #     # @param age [Integer] The age of the person.
-  #     def greet(name, age)
-  #       puts "Hello, #{name}! You are #{age} years old."
-  #     end
-  #   end
-  #
-  #   ExampleClass.instance_method(:greet).to_json_schema
-  #   # => {
-  #   #   "type" => "function",
-  #   #   "function" => {
-  #   #     "name" => "greet",
-  #   #     "description" => "",
-  #   #     "parameters" => {
-  #   #       "type" => "object",
-  #   #       "properties" => {
-  #   #         "name" => {
-  #   #           "type" => "string",
-  #   #           "description" => "The name of the person."
-  #   #         },
-  #   #         "age" => {
-  #   #           "type" => "integer",
-  #   #           "description" => "The age of the person."
-  #   #         }
-  #   #       },
-  #   #       "required" => ["name", "age"]
-  #   #     }
-  #   #   }
-  #   # }
-  #
   # @return [String] The JSON schema representation of the method.
   def to_json_schema
     ToolTailor.convert(self)
@@ -143,39 +148,16 @@ end
 class Method
   # Converts a Method to a JSON schema.
   #
-  # @example
-  #   class ExampleClass
-  #     # @param name [String] The name of the person.
-  #     # @param age [Integer] The age of the person.
-  #     def greet(name, age)
-  #       puts "Hello, #{name}! You are #{age} years old."
-  #     end
-  #   end
-  #
-  #   ExampleClass.new.method(:greet).to_json_schema
-  #   # => {
-  #   #   "type" => "function",
-  #   #   "function" => {
-  #   #     "name" => "greet",
-  #   #     "description" => "",
-  #   #     "parameters" => {
-  #   #       "type" => "object",
-  #   #       "properties" => {
-  #   #         "name" => {
-  #   #           "type" => "string",
-  #   #           "description" => "The name of the person."
-  #   #         },
-  #   #         "age" => {
-  #   #           "type" => "integer",
-  #   #           "description" => "The age of the person."
-  #   #         }
-  #   #       },
-  #   #       "required" => ["name", "age"]
-  #   #     }
-  #   #   }
-  #   # }
-  #
   # @return [String] The JSON schema representation of the method.
+  def to_json_schema
+    ToolTailor.convert(self)
+  end
+end
+
+class Class
+  # Converts a Class to a JSON schema.
+  #
+  # @return [String] The JSON schema representation of the class's initialize method.
   def to_json_schema
     ToolTailor.convert(self)
   end

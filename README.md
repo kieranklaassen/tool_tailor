@@ -1,6 +1,6 @@
 # ToolTailor
 
-ToolTailor is a Ruby gem that converts methods to OpenAI JSON schemas for use with tools, making it easier to integrate with OpenAI's API.
+ToolTailor is a Ruby gem that converts methods and classes to OpenAI JSON schemas for use with tools, making it easier to integrate with OpenAI's API.
 
 ## Installation
 
@@ -20,8 +20,12 @@ Or install it yourself as:
 
 ## Usage
 
-```rb
-class TestClass
+ToolTailor can convert both methods and classes to JSON schemas:
+
+### Converting Methods
+
+```ruby
+class WeatherService
   # Get the current weather in a given location.
   #
   # @param location [String] The city and state, e.g., San Francisco, CA.
@@ -31,105 +35,100 @@ class TestClass
   end
 end
 
-# Simple
-ToolTailor.convert(TestClass.instance_method(:get_current_weather))
+# Convert an instance method
+schema = ToolTailor.convert(WeatherService.instance_method(:get_current_weather))
 
-# Unbound method with to_json_schema
-TestClass.instance_method(:get_current_weather).to_json_schema # => {
-#   "type" => "function",
-#   "function" => {
-#     "name" => "get_current_weather",
-#     "description" => "Get the current weather in a given location.",
-#     "parameters" => {
-#       "type" => "object",
-#       "properties" => {
-#         "location" => {
-#           "type" => "string",
-#           "description" => "The city and state, e.g., San Francisco, CA."
-#         },
-#         "unit" => {
-#           "type" => "string",
-#           "description" => "The unit of temperature, either 'celsius' or 'fahrenheit'."
-#         },
-#         "api_key" => {
-#           "type" => "number",
-#           "description" => "The API key for the weather service."
-#         }
-#       },
-#       "required" => ["location", "unit", "api_key"]
-#     }
-#   }
+# Using to_json_schema on an unbound method
+schema = WeatherService.instance_method(:get_current_weather).to_json_schema
 
-# Bound method with to_json_schema
-example_instance = TestClass.new
-example_instance.method(:get_current_weather).to_json_schema # => {
-#   "type" => "function",
-#   "function" => {
-#     "name" => "get_current_weather",
-#     "description" => "Get the current weather in a given location.",
-#     "parameters" => {
-#       "type" => "object",
-#       "properties" => {
-#         "location" => {
-#           "type" => "string",
-#           "description" => "The city and state, e.g., San Francisco, CA."
-#         },
-#         "unit" => {
-#           "type" => "string",
-#           "description" => "The unit of temperature, either 'celsius' or 'fahrenheit'."
-#         },
-#         "api_key" => {
-#           "type" => "number",
-#           "description" => "The API key for the weather service."
-#         }
-#       },
-#       "required" => ["location", "unit", "api_key"]
-#     }
-#   }
-# }
+# Using to_json_schema on a bound method
+weather_service = WeatherService.new
+schema = weather_service.method(:get_current_weather).to_json_schema
 ```
 
-And with [ruby-openai](https://github.com/alexrudall/ruby-openai):
+### Converting Classes
 
-```rb
-response =
-  client.chat(
-    parameters: {
-      model: "gpt-4o",
-      messages: [
-        {
-          "role": "user",
-          "content": "What is the weather like in San Francisco?",
+When passing a class, ToolTailor assumes you want to use the `new` method and generates the schema based on the `initialize` method:
+
+```ruby
+class User
+  # Create a new user
+  #
+  # @param name [String] The user's name
+  # @param age [Integer] The user's age
+  def initialize(name:, age:)
+    @name = name
+    @age = age
+  end
+end
+
+# Convert a class
+schema = ToolTailor.convert(User)
+
+# or
+schema = User.to_json_schema
+
+# This is equivalent to:
+schema = ToolTailor.convert(User.instance_method(:initialize))
+```
+
+The resulting schema will look like this:
+
+```ruby
+{
+  "type" => "function",
+  "function" => {
+    "name" => "User",
+    "description" => "Create a new user",
+    "parameters" => {
+      "type" => "object",
+      "properties" => {
+        "name" => {
+          "type" => "string",
+          "description" => "The user's name"
         },
-      ],
-      tools: [
-        TestClass.instance_method(:get_current_weather).to_json_schema
-      ],
-      tool_choice: {
-        type: "function",
-        function: {
-          name: "get_current_weather"
+        "age" => {
+          "type" => "integer",
+          "description" => "The user's age"
         }
-      }
-    },
-  )
+      },
+      "required" => ["name", "age"]
+    }
+  }
+}
+```
+
+### Using with ruby-openai
+
+Here's an example of how to use ToolTailor with the [ruby-openai](https://github.com/alexrudall/ruby-openai) gem:
+
+```ruby
+response = client.chat(
+  parameters: {
+    model: "gpt-4",
+    messages: [
+      { role: "user", content: "Create a user named Alice who is 30 years old" }
+    ],
+    tools: [ToolTailor.convert(User)],
+    tool_choice: { type: "function", function: { name: "User" } }
+  }
+)
 
 message = response.dig("choices", 0, "message")
 
 if message["role"] == "assistant" && message["tool_calls"]
   function_name = message.dig("tool_calls", 0, "function", "name")
-  args =
-    JSON.parse(
-      message.dig("tool_calls", 0, "function", "arguments"),
-      { symbolize_names: true },
-    )
+  args = JSON.parse(
+    message.dig("tool_calls", 0, "function", "arguments"),
+    { symbolize_names: true }
+  )
 
   case function_name
-  when "get_current_weather"
-    TestClass.get_current_weather(**args)
+  when "User"
+    user = User.new(**args)
+    puts "Created user: #{user.name}, age #{user.age}"
   end
 end
-# => "The weather is nice 🌞"
 ```
 
 ## Development
@@ -147,3 +146,5 @@ Bug reports and pull requests are welcome on GitHub at https://github.com/kieran
 The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
 
 ## Code of Conduct
+
+Everyone interacting in the ToolTailor project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/kieranklaassen/tool_tailor/blob/master/CODE_OF_CONDUCT.md).
