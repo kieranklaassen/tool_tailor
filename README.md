@@ -29,21 +29,22 @@ class WeatherService
   # Get the current weather in a given location.
   #
   # @param location [String] The city and state, e.g., San Francisco, CA.
-  # @param unit [String] The unit of temperature, either 'celsius' or 'fahrenheit'.
-  def get_current_weather(location:, unit: 'celsius')
+  # @param unit [String] The temperature unit to use. Infer this from the user's location.
+  # @values unit ["Celsius", "Fahrenheit"]
+  def get_current_temperature(location:, unit:)
     # Function implementation goes here
   end
 end
 
 # Convert an instance method
-schema = ToolTailor.convert(WeatherService.instance_method(:get_current_weather))
+schema = ToolTailor.convert(WeatherService.instance_method(:get_current_temperature))
 
 # Using to_json_schema on an unbound method
-schema = WeatherService.instance_method(:get_current_weather).to_json_schema
+schema = WeatherService.instance_method(:get_current_temperature).to_json_schema
 
 # Using to_json_schema on a bound method
 weather_service = WeatherService.new
-schema = weather_service.method(:get_current_weather).to_json_schema
+schema = weather_service.method(:get_current_temperature).to_json_schema
 ```
 
 ### Converting Classes

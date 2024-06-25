@@ -12,9 +12,9 @@ class TestClass
   # Get the current weather in a given location.
   #
   # @param location [String] The city and state, e.g., San Francisco, CA.
-  # @param unit [String] The unit of temperature, either 'celsius' or 'fahrenheit'.
-  # @param api_key: [Float] The API key for the weather service.
-  def get_current_weather(location:, unit: 'celsius', api_key: nil)
+  # @param unit [String] The temperature unit to use. Infer this from the user's location.
+  # @values unit ["Celsius", "Fahrenheit"]
+  def get_current_temperature(location:, unit:)
     # Function implementation goes here
   end
 
@@ -35,7 +35,7 @@ RSpec.describe ToolTailor do
     expected_schema = {
       "type" => "function",
       "function" => {
-        "name" => "get_current_weather",
+        "name" => "get_current_temperature",
         "description" => "Get the current weather in a given location.",
         "parameters" => {
           "type" => "object",
@@ -46,21 +46,18 @@ RSpec.describe ToolTailor do
             },
             "unit" => {
               "type" => "string",
-              "description" => "The unit of temperature, either 'celsius' or 'fahrenheit'."
-            },
-            "api_key" => {
-              "type" => "number",
-              "description" => "The API key for the weather service."
+              "description" => "The temperature unit to use. Infer this from the user's location.",
+              "enum" => ["Celsius", "Fahrenheit"]
             }
           },
-          "required" => ["location"]
+          "required" => ["location", "unit"]
         }
       }
     }.to_json
 
     # Assert that the generated schema matches the expected schema
-    expect(TestClass.instance_method(:get_current_weather).to_json_schema).to eq(expected_schema)
-    expect(TestClass.new.method(:get_current_weather).to_json_schema).to eq(expected_schema)
+    expect(TestClass.instance_method(:get_current_temperature).to_json_schema).to eq(expected_schema)
+    expect(TestClass.new.method(:get_current_temperature).to_json_schema).to eq(expected_schema)
   end
 
   it "handles missing YARD documentation gracefully" do

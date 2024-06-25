@@ -1,6 +1,7 @@
 require "tool_tailor/version"
 require "json"
 require "yard"
+require "yard_custom_tags"
 
 module ToolTailor
   class Error < StandardError; end
@@ -58,7 +59,8 @@ module ToolTailor
       {
         name: name.to_s,
         type: "string",
-        description: ""
+        description: "",
+        enum: nil
       }
     end
 
@@ -75,6 +77,12 @@ module ToolTailor
           param[:description] = tag.text
         end
       end
+
+      yard_object.tags("values").each do |tag|
+        param_name = tag.name.chomp(':')
+        param = parameters.find { |p| p[:name] == param_name }
+        param[:enum] = tag.text if param
+      end
     end
 
     {
@@ -89,8 +97,9 @@ module ToolTailor
               param[:name],
               {
                 type: param[:type],
-                description: param[:description]
-              }
+                description: param[:description],
+                enum: param[:enum]
+              }.compact
             ]
           end.to_h,
           required: method.parameters.select { |type, _| type == :keyreq }.map { |_, name| name.to_s }
