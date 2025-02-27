@@ -17,6 +17,8 @@ ToolTailor is a focused Ruby gem that converts Ruby methods with YARD documentat
 - Support for optional and required parameters
 - YARD documentation to JSON schema mapping
 - Enum values support via custom `@values` tag
+- Array items type support via `@items_type` tag
+- Array constraints via `@min_items` and `@max_items` tags
 - Format output as JSON string or Ruby hash
 - Batch conversion of multiple methods
 - Robust error handling and debugging options
@@ -27,9 +29,16 @@ ToolTailor is a focused Ruby gem that converts Ruby methods with YARD documentat
 - Document methods with YARD
 - Type definitions: `@param name [Type] Description`
 - Enum values: `@values param_name ["Value1", "Value2"]` tag
+- Array items: `@items_type param_name Type` tag
+- Array constraints: `@min_items param_name 1` and `@max_items param_name 5` tags
 - Error handling: Raise specific errors with clear messages
 - Naming: Snake_case for methods/variables, CamelCase for classes/modules
 - Method signature: Use named parameters (keyword arguments)
+
+## Limitations
+- Only supports named parameters (keyword arguments)
+- Does not support nested object properties
+- Object types are treated as generic objects without additional schema validation
 
 ## Testing Guidelines
 - Write both unit and integration tests

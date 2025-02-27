@@ -45,6 +45,47 @@ class TestClass
   def shipping_options(destination:, weight:, dimensions: nil, express_only: false)
     # Implementation
   end
+  
+  # Get a list of tags for a product
+  #
+  # @param product_id [String] The ID of the product
+  # @param include_hidden [Boolean] Whether to include hidden tags
+  # @param tags [Array] Tags to filter by
+  # @items_type tags String
+  def product_tags(product_id:, include_hidden: false, tags: [])
+    # Implementation
+  end
+  
+  # Process order items
+  #
+  # @param order_id [String] The ID of the order
+  # @param items [Array] Array of item objects
+  # @items_type items Object
+  def process_order_items(order_id:, items:)
+    # Implementation
+  end
+  
+  # Get the top categories with constraints on array size
+  #
+  # @param store_id [String] The ID of the store
+  # @param categories [Array] List of category IDs to include
+  # @items_type categories String
+  # @min_items categories 1
+  # @max_items categories 5
+  def top_categories(store_id:, categories:)
+    # Implementation
+  end
+  
+  # Get related products
+  #
+  # @param product_id [String] The ID of the product
+  # @param related_ids [Array] List of related product IDs
+  # @items_type related_ids String
+  # @min_items related_ids 3
+  # @max_items related_ids 10
+  def related_products(product_id:, related_ids:)
+    # Implementation
+  end
 end
 
 RSpec.describe ToolTailor do
@@ -138,6 +179,39 @@ RSpec.describe ToolTailor do
     expect(schema[:function][:parameters][:properties]["destination"][:type]).to eq("object")
     expect(schema[:function][:parameters][:properties]["weight"][:type]).to eq("number")
     expect(schema[:function][:parameters][:properties]["express_only"][:type]).to eq("boolean")
+  end
+  
+  it "supports array items type specification" do
+    schema = ToolTailor.convert(TestClass.instance_method(:product_tags), format: :hash)
+    
+    expect(schema[:function][:parameters][:properties]["tags"][:type]).to eq("array")
+    expect(schema[:function][:parameters][:properties]["tags"][:items][:type]).to eq("string")
+  end
+  
+  it "supports complex items type for arrays" do
+    schema = ToolTailor.convert(TestClass.instance_method(:process_order_items), format: :hash)
+    
+    expect(schema[:function][:parameters][:properties]["items"][:type]).to eq("array")
+    expect(schema[:function][:parameters][:properties]["items"][:items][:type]).to eq("string")
+  end
+  
+  it "supports minItems and maxItems constraints for arrays" do
+    schema = ToolTailor.convert(TestClass.instance_method(:top_categories), format: :hash)
+    
+    expect(schema[:function][:parameters][:properties]["categories"][:type]).to eq("array")
+    expect(schema[:function][:parameters][:properties]["categories"][:items][:type]).to eq("string")
+    expect(schema[:function][:parameters][:properties]["categories"][:minItems]).to eq(1)
+    expect(schema[:function][:parameters][:properties]["categories"][:maxItems]).to eq(5)
+  end
+  
+  it "correctly combines items_type with min/max constraints" do
+    schema = ToolTailor.convert(TestClass.instance_method(:related_products), format: :hash)
+    
+    array_props = schema[:function][:parameters][:properties]["related_ids"]
+    expect(array_props[:type]).to eq("array")
+    expect(array_props[:items][:type]).to eq("string")
+    expect(array_props[:minItems]).to eq(3)
+    expect(array_props[:maxItems]).to eq(10)
   end
   
   it "supports batch conversion of multiple methods" do

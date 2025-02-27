@@ -11,6 +11,7 @@ Key principles:
 - **Leverage existing code**: Use YARD documentation you already have
 - **Minimal dependencies**: Just YARD and standard libraries
 - **Composable**: Works with any API client of your choice
+- **Extensible tags**: Custom YARD tags for array items, enums, and more
 
 ## Installation
 
@@ -41,7 +42,11 @@ class WeatherService
   # @param location [String] The city and state, e.g., San Francisco, CA.
   # @param unit [String] The temperature unit to use. Infer this from the user's location.
   # @values unit ["Celsius", "Fahrenheit"]
-  def get_current_temperature(location:, unit:)
+  # @param historical_data [Array] Optional array of previous weather readings
+  # @items_type historical_data Object
+  # @min_items historical_data 1
+  # @max_items historical_data 5
+  def get_current_temperature(location:, unit:, historical_data: nil)
     # Function implementation goes here
   end
 end
@@ -86,11 +91,67 @@ The resulting schema will look like this:
           "type": "string",
           "description": "The temperature unit to use. Infer this from the user's location.",
           "enum": ["Celsius", "Fahrenheit"]
+        },
+        "historical_data": {
+          "type": "array",
+          "description": "Optional array of previous weather readings",
+          "items": {
+            "type": "object"
+          },
+          "minItems": 1,
+          "maxItems": 5
         }
       },
       "required": ["location", "unit"]
     }
   }
+}
+```
+
+### Custom YARD Tags
+
+ToolTailor adds support for custom YARD tags to enhance JSON schema generation. Currently, we do not support nested objects with complex properties, but we plan to add this in the future.
+
+#### @values
+
+The `@values` tag specifies allowed values for a parameter (enum in JSON Schema):
+
+```ruby
+# @param sort_by [String] Field to sort results by
+# @values sort_by ["price_asc", "price_desc", "newest", "best_match"]
+```
+
+#### @items_type
+
+The `@items_type` tag specifies the type of items in an array parameter:
+
+```ruby
+# @param tags [Array] Array of tag strings
+# @items_type tags String
+
+# @param products [Array] Array of product objects
+# @items_type products Object
+```
+
+#### @min_items and @max_items
+
+The `@min_items` and `@max_items` tags specify the minimum and maximum number of items allowed in an array:
+
+```ruby
+# @param categories [Array] List of category IDs to include
+# @items_type categories String
+# @min_items categories 1
+# @max_items categories 5
+```
+
+This generates a schema with:
+
+```json
+"categories": {
+  "type": "array",
+  "items": { "type": "string" },
+  "minItems": 1,
+  "maxItems": 5
 }
 ```
 
