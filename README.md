@@ -1,6 +1,16 @@
 # ToolTailor
 
-ToolTailor is a Ruby gem that converts methods and classes to OpenAI JSON schemas for use with tools, making it easier to integrate with OpenAI's API.
+ToolTailor is a focused Ruby gem that converts Ruby methods into JSON schemas for OpenAI and Anthropic tool calling APIs.
+
+## Philosophy
+
+ToolTailor is designed as a lightweight building block, not a full framework. It has a single purpose: to convert your existing Ruby methods with YARD documentation into tool schemas for AI tool calling. It doesn't implement the actual API calls or handle responses - it's the glue that helps you expose your existing code to AI systems with minimal effort.
+
+Key principles:
+- **Do one thing well**: Convert methods to JSON schemas
+- **Leverage existing code**: Use YARD documentation you already have
+- **Minimal dependencies**: Just YARD and standard libraries
+- **Composable**: Works with any API client of your choice
 
 ## Installation
 
@@ -20,7 +30,7 @@ Or install it yourself as:
 
 ## Usage
 
-ToolTailor can convert both methods and classes to JSON schemas:
+ToolTailor converts Ruby methods to JSON schemas:
 
 ### Converting Methods
 
@@ -45,58 +55,60 @@ schema = WeatherService.instance_method(:get_current_temperature).to_json_schema
 # Using to_json_schema on a bound method
 weather_service = WeatherService.new
 schema = weather_service.method(:get_current_temperature).to_json_schema
-```
 
-### Converting Classes
+# Get as a Ruby hash instead of JSON string
+schema_hash = weather_service.method(:get_current_temperature).to_json_schema(format: :hash)
 
-When passing a class, ToolTailor assumes you want to use the `new` method and generates the schema based on the `initialize` method:
-
-```ruby
-class User
-  # Create a new user
-  #
-  # @param name [String] The user's name
-  # @param age [Integer] The user's age
-  def initialize(name:, age:)
-    @name = name
-    @age = age
-  end
-end
-
-# Convert a class
-schema = ToolTailor.convert(User)
-
-# or
-schema = User.to_json_schema
-
-# This is equivalent to:
-schema = ToolTailor.convert(User.instance_method(:initialize))
+# Convert multiple methods at once
+methods = [
+  WeatherService.instance_method(:get_current_temperature),
+  SearchService.instance_method(:search_products)
+]
+schemas = ToolTailor.batch_convert(methods)
 ```
 
 The resulting schema will look like this:
 
-```ruby
+```json
 {
-  "type" => "function",
-  "function" => {
-    "name" => "User",
-    "description" => "Create a new user",
-    "parameters" => {
-      "type" => "object",
-      "properties" => {
-        "name" => {
-          "type" => "string",
-          "description" => "The user's name"
+  "type": "function",
+  "function": {
+    "name": "get_current_temperature",
+    "description": "Get the current weather in a given location.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "location": {
+          "type": "string",
+          "description": "The city and state, e.g., San Francisco, CA."
         },
-        "age" => {
-          "type" => "integer",
-          "description" => "The user's age"
+        "unit": {
+          "type": "string",
+          "description": "The temperature unit to use. Infer this from the user's location.",
+          "enum": ["Celsius", "Fahrenheit"]
         }
       },
-      "required" => ["name", "age"]
+      "required": ["location", "unit"]
     }
   }
 }
+```
+
+### Debugging and Logging
+
+ToolTailor provides logging capabilities to help debug schema generation:
+
+```ruby
+# Enable debug logging
+ToolTailor.enable_debug!
+
+# Disable debug logging
+ToolTailor.disable_debug!
+
+# Use a custom logger
+custom_logger = Logger.new('tool_tailor.log')
+custom_logger.level = Logger::INFO
+ToolTailor.logger = custom_logger
 ```
 
 ### Using with ruby-openai
@@ -104,32 +116,81 @@ The resulting schema will look like this:
 Here's an example of how to use ToolTailor with the [ruby-openai](https://github.com/alexrudall/ruby-openai) gem:
 
 ```ruby
+class WeatherService
+  # Get the current weather in a given location.
+  #
+  # @param location [String] The city and state, e.g., San Francisco, CA.
+  # @param unit [String] The temperature unit to use. Infer this from the user's location.
+  # @values unit ["Celsius", "Fahrenheit"]
+  def get_current_weather(location:, unit:)
+    # Implementation that fetches real weather data
+    { temp: 72, conditions: "Sunny", location: location, unit: unit }
+  end
+end
+
+weather_service = WeatherService.new
+weather_method = weather_service.method(:get_current_weather)
+
+client = OpenAI::Client.new
+
 response = client.chat(
   parameters: {
     model: "gpt-4",
     messages: [
-      { role: "user", content: "Create a user named Alice who is 30 years old" }
+      { role: "user", content: "What's the weather like in San Francisco?" }
     ],
-    tools: [ToolTailor.convert(User)],
-    tool_choice: { type: "function", function: { name: "User" } }
+    tools: [ToolTailor.convert(weather_method, format: :hash)],
+    tool_choice: "auto"
   }
 )
 
-message = response.dig("choices", 0, "message")
-
-if message["role"] == "assistant" && message["tool_calls"]
-  function_name = message.dig("tool_calls", 0, "function", "name")
-  args = JSON.parse(
-    message.dig("tool_calls", 0, "function", "arguments"),
-    { symbolize_names: true }
-  )
-
-  case function_name
-  when "User"
-    user = User.new(**args)
-    puts "Created user: #{user.name}, age #{user.age}"
+if response.dig("choices", 0, "message", "tool_calls")
+  tool_call = response.dig("choices", 0, "message", "tool_calls", 0)
+  function_name = tool_call.dig("function", "name")
+  arguments = JSON.parse(tool_call.dig("function", "arguments"), symbolize_names: true)
+  
+  if function_name == "get_current_weather"
+    result = weather_service.get_current_weather(**arguments)
+    puts "Weather in #{result[:location]}: #{result[:temp]}° #{result[:unit]}, #{result[:conditions]}"
   end
 end
+```
+
+### Using with anthropic
+
+Similar approach works with the Anthropic Claude API:
+
+```ruby
+require 'anthropic'
+require 'tool_tailor'
+
+class TranslationService
+  # Translate text to another language
+  #
+  # @param text [String] The text to translate
+  # @param target_language [String] The language to translate to
+  # @values target_language ["Spanish", "French", "German", "Japanese", "Chinese"]
+  def translate(text:, target_language:)
+    # Implementation that calls a translation API
+    "Translated text in #{target_language}"
+  end
+end
+
+translation_service = TranslationService.new
+translate_method = translation_service.method(:translate)
+
+client = Anthropic::Client.new
+
+response = client.messages(
+  model: "claude-3-opus-20240229",
+  max_tokens: 1024,
+  messages: [
+    { role: "user", content: "Can you translate 'Hello world' to French?" }
+  ],
+  tools: [ToolTailor.convert(translate_method, format: :hash)]
+)
+
+# Process tool calls from response
 ```
 
 ## Development

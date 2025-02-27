@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    tool_tailor (0.2.0)
+    tool_tailor (0.2.1)
       yard (~> 0.9.36)
 
 GEM
@@ -30,10 +30,11 @@ GEM
       attr_extras (>= 6.2.4)
       diff-lcs
       patience_diff
-    yard (0.9.36)
+    yard (0.9.37)
 
 PLATFORMS
   x86_64-darwin-21
+  x86_64-darwin-22
 
 DEPENDENCIES
   rake (~> 12.0)

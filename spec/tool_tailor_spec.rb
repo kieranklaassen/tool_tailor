@@ -23,9 +23,36 @@ class TestClass
 
   def not_named_arg(text)
   end
+  
+  # Search for products in the catalog.
+  #
+  # @param query [String] The search query term
+  # @param category [String] Product category to filter by
+  # @param max_price [Float] Maximum price filter
+  # @param sort_by [String] Field to sort results by
+  # @values sort_by ["price_asc", "price_desc", "newest", "best_match"]
+  # @param limit [Integer] Maximum number of results to return (1-100)
+  def search_products(query:, category: nil, max_price: nil, sort_by: "best_match", limit: 20)
+    # Implementation
+  end
+  
+  # Get available shipping options
+  #
+  # @param destination [Hash] Shipping destination address
+  # @param weight [Float] Package weight in kg
+  # @param dimensions [Hash] Package dimensions in cm
+  # @param express_only [Boolean] Only show express shipping options
+  def shipping_options(destination:, weight:, dimensions: nil, express_only: false)
+    # Implementation
+  end
 end
 
 RSpec.describe ToolTailor do
+  before do
+    # Redirect logger output during tests
+    ToolTailor.logger = Logger.new(StringIO.new)
+  end
+  
   it "has a version number" do
     expect(ToolTailor::VERSION).not_to be nil
   end
@@ -89,33 +116,46 @@ RSpec.describe ToolTailor do
     }.to raise_error(ArgumentError, /Only named arguments are supported/)
   end
 
-  it "converts a class to a JSON schema representation using the initialize method" do
-    expected_schema = {
-      "type" => "function",
-      "function" => {
-        "name" => "TestClass",
-        "description" => "Class with YARD documentation",
-        "parameters" => {
-          "type" => "object",
-          "properties" => {
-            "name" => {
-              "type" => "string",
-              "description" => "The name of the test instance"
-            },
-            "value" => {
-              "type" => "integer",
-              "description" => "A test value"
-            },
-            "options" => {
-              "type" => "object",
-              "description" => "Additional options"
-            }
-          },
-          "required" => []
-        }
-      }
-    }.to_json
-
-    expect(ToolTailor.convert(TestClass)).to eq(expected_schema)
+  it "raises an error for classes" do
+    expect {
+      ToolTailor.convert(TestClass)
+    }.to raise_error(ArgumentError, /only Method and UnboundMethod are supported/)
+  end
+  
+  it "correctly handles optional parameters" do
+    schema = ToolTailor.convert(TestClass.instance_method(:search_products), format: :hash)
+    
+    expect(schema[:function][:name]).to eq("search_products")
+    expect(schema[:function][:parameters][:required]).to eq(["query"])
+    expect(schema[:function][:parameters][:properties].keys).to include("query", "category", "max_price", "sort_by", "limit")
+    expect(schema[:function][:parameters][:properties]["sort_by"][:enum]).to eq(["price_asc", "price_desc", "newest", "best_match"])
+    expect(schema[:function][:parameters][:properties]["limit"][:type]).to eq("integer")
+  end
+  
+  it "handles complex parameter types" do
+    schema = ToolTailor.convert(TestClass.instance_method(:shipping_options), format: :hash)
+    
+    expect(schema[:function][:parameters][:properties]["destination"][:type]).to eq("object")
+    expect(schema[:function][:parameters][:properties]["weight"][:type]).to eq("number")
+    expect(schema[:function][:parameters][:properties]["express_only"][:type]).to eq("boolean")
+  end
+  
+  it "supports batch conversion of multiple methods" do
+    methods = [
+      TestClass.instance_method(:get_current_temperature),
+      TestClass.instance_method(:search_products)
+    ]
+    
+    schemas = ToolTailor.batch_convert(methods)
+    expect(schemas).to be_an(Array)
+    expect(schemas.size).to eq(2)
+    expect(schemas[0][:function][:name]).to eq("get_current_temperature")
+    expect(schemas[1][:function][:name]).to eq("search_products")
+  end
+  
+  it "returns hash format when specified" do
+    schema = TestClass.instance_method(:get_current_temperature).to_json_schema(format: :hash)
+    expect(schema).to be_a(Hash)
+    expect(schema[:function][:name]).to eq("get_current_temperature")
   end
 end
